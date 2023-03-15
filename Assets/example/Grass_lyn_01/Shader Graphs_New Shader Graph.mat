@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-7123728815185834542
+--- !u!114 &-7629486696755156359
 MonoBehaviour:
   m_ObjectHideFlags: 11
   m_CorrespondingSourceObject: {fileID: 0}
@@ -20,8 +20,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Grass_03
-  m_Shader: {fileID: -6465566751694194690, guid: ccf41bb5846552c4db975a0066f7c565, type: 3}
+  m_Name: Shader Graphs_New Shader Graph
+  m_Shader: {fileID: -6465566751694194690, guid: 41efb511122e83846bb7ccba4def9eef, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -32,16 +32,16 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
-  m_LockedProperties: 
+  m_LockedProperties: _AlphaClip _ColorTip
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
-    - _Albedo:
+    - _Basecolor:
         m_Texture: {fileID: 2800000, guid: b396392873f4bff4b8fb0037267ef52f, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _ColorVariation:
-        m_Texture: {fileID: 0}
+    - _texva:
+        m_Texture: {fileID: 2800000, guid: a7637aed34515e247809a69ea2a2c0ce, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - unity_Lightmaps:
@@ -58,14 +58,14 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AlphaCilp: 0.5
-    - _Cilp: 0.5
-    - _Gradient_Offset: 0
+    - _AlphaClip: 0.1
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _VariationMapSize: 10
+    - _VPower: 2
+    - _offset: 4.82
+    - _texvasize: 10.72
     m_Colors:
-    - _ColorTip: {r: 0.737255, g: 1, b: 0.45882344, a: 0}
-    - _ColorVariation_2: {r: 0.9529411, g: 0.8627451, b: 0.34901956, a: 0}
-    - _MainColor: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 0, g: 0, b: 0, a: 0}
+    - _ColorTip: {r: 1, g: 0, b: 0, a: 0}
+    - _Color_VA: {r: 1, g: 0.9790649, b: 0.71383643, a: 0}
   m_BuildTextureStacks: []
