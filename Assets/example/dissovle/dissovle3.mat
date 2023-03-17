@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-501608139394314349
+--- !u!114 &-2461527878381297680
 MonoBehaviour:
   m_ObjectHideFlags: 11
   m_CorrespondingSourceObject: {fileID: 0}
@@ -20,8 +20,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: dissovle
-  m_Shader: {fileID: -6465566751694194690, guid: 349919f374b32444dba0a2f9d8bfc845, type: 3}
+  m_Name: dissovle3
+  m_Shader: {fileID: -6465566751694194690, guid: 9a20c4e474e26f44ab82b8c124ed2ad4, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -36,11 +36,11 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
-    - _MainTex:
+    - _maintex:
         m_Texture: {fileID: 2800000, guid: 849c53a7445f16c47997fe2ca88989cd, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _disMask:
+    - _wenli:
         m_Texture: {fileID: 2800000, guid: a1c95ddcfe017624896c78934bb26403, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -60,11 +60,10 @@ Material:
     m_Floats:
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _dissovle: 0.282
-    - _grad1: 0.06
-    - _grad2: 0.097
+    - _bianyuan: 0.14
+    - _bianyuan3: 0.23
+    - _rongjiedu: 0.39
     m_Colors:
-    - _c1: {r: 0, g: 0, b: 0, a: 0}
-    - _c2: {r: 0.8301887, g: 0.17621933, b: 0.27529863, a: 0}
-    - _mainCol: {r: 1, g: 1, b: 1, a: 0}
+    - _bianyuan1: {r: 0, g: 1, b: 0.9897845, a: 0}
+    - _bianyuan2: {r: 1, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
