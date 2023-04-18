@@ -1,0 +1,11 @@
+shaderlab简介
+显卡渲染管线简介
+    app发送mesh数据给显卡
+    vert shader -> 栅格化/插值-> frag shader
+        三角插值介绍
+        https://codeplea.com/triangular-interpolation
+顶点shader的核心任务
+    返回该顶点的裁切空间坐标，通常通过mvp变换
+片元shader的核心任务
+    返回该片元的颜色
+uv与纹理采样
