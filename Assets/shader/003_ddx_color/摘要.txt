@@ -1,0 +1,2 @@
+Derivatives and branches
+Derivatives computation is based on the parallel execution on the GPU’s hardware of multiple instances of a shader. Scalar operations are executed with a SIMD (Single Instruction Multiple Data) architecture on registers containing a vector of 4 values for a block of 2×2 pixels. This means that at every step of execution, the shader instances belonging to each 2×2 block are synchronized making derivative computation fast and easy to implement in hardware, being a simple subtraction of values contained in the same register.
