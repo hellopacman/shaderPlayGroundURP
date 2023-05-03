@@ -1,0 +1,18 @@
+dot
+  |a|*|b|*cos(A)
+    当任一模长为1，比如|a|等于1时，结果为b在a上的投影长度
+    当|a|、|b|都为1时，结果为a、b夹角的余弦
+smooth shading
+漫反射
+  Lambert
+    用nDotL，即光线在法线上的投影长度，或者说光线与法线的重合程度，来描述光线以某角度照射到平面后的漫反射强度
+  像素级别 vs 顶点级别(插值)
+高光
+  BRDF    双方向光照
+  Phong
+    光泽度
+  ps范例
+    用曲线调整光斑大小
+  Blinn
+    half Vector
+	https://www.bilibili.com/video/BV1X7411F744/?p=8&vd_source=99762d6224768b93f3458be719d0b8f7
