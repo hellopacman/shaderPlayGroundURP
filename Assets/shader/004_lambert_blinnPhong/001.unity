@@ -815,7 +815,7 @@ GameObject:
   m_Component:
   - component: {fileID: 998509062}
   m_Layer: 0
-  m_Name: phong_frag (2)
+  m_Name: blinn_frag
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2359,7 +2359,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1605341970}
   m_Layer: 0
-  m_Name: phong_frag (1)
+  m_Name: phong_vert
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
