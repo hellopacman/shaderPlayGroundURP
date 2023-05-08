@@ -41,7 +41,7 @@ Shader "mdtut/004/lambert_frag"
             {
                 Varyings o = (Varyings)0;
                 o.positionCS = TransformObjectToHClip(v.positionOS);
-                // object·¨Ïß->world
+                // object normal ->world
                 o.fragNormalWS = TransformObjectToWorldDir(v.vertNormalOS);
                 o.fragUV = v.vertUV;
                 return o;
