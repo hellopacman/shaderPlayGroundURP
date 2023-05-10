@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: NormalMap02
+  m_Name: NormalMap04
   m_Shader: {fileID: 4800000, guid: a8e766248674a9849bbd2abd47707013, type: 3}
   m_ValidKeywords: []
   m_InvalidKeywords: []
@@ -30,11 +30,11 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Gloss: 10
+    - _Gloss: 90.1
     - _NormalScale: 1
     m_Colors:
     - _LightCol: {r: 1, g: 1, b: 1, a: 1}
-    - _LightDirWS: {r: 0, g: 1, b: 0, a: 0}
+    - _LightDirWS: {r: 0.69, g: 1, b: -0.5, a: 0}
     - _MainCol: {r: 1, g: 1, b: 1, a: 1}
     - _SpecularCol: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
