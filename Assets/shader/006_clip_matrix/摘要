@@ -1,0 +1,62 @@
+在MV变换之后，要把顶点坐标进一步转换为某种格式，该格式可以方便的解决以下问题
+    1. 为做透视投影做好准备，且投影计算的结果有直观的含义
+    2. 非常简单就可以判断是否位于相机视锥之内
+        !!! P变换不是RST变换，不是RST变换，不是RST变换
+透视投影
+    投影
+        把3d空间画到2d平面上
+    空间透视
+        小孔成像，近大远小
+对于渲染来说，不必考虑现实情况，为了便于计算我们透视投影到z=1平面上
+    那么view.xyz投影到z=1平面
+    proj.x / 1 = view.x / view.z
+    proj.y / 1 = view.y / view.z
+    即view.xy坐标除以深度view.z
+    所以，第一步我们让clip.w = view.z
+
+视锥包含判断
+上面我们确定了clip.w的取值
+接下来我们要对eye.xyz做一些计算(变换)
+    clip.x = eye.x * ctg(fovX*0.5) 
+    clip.y = eye.y * ctg(fovY*0.5)
+    clip.z = eye.z * (f+n)/(f-n) + -2nf(f-n)
+经过上述变换
+    使用该简单规则即可判断顶点是否位于视锥之内 
+    (Opengl)−w ≤ x ≤ w &&
+     −w ≤ y ≤ w &&
+     −w ≤ z ≤ w
+    dx 使用0 ≤ z ≤ w
+    clip.xyz的数值发生一些变化，但用途仍保留了下来
+
+NDC坐标
+gpu(在栅格化)执行clipPos.xyz/clipPos.w，结果称为NormalizedDeviceCoordinate
+clip.xy除以clip.w(即eye.z)之后的结果，仍保留透视投影的意义（只是改变了比例）
+ndx.xy的值域是[-1,1]，转换为[0,1]可以方便的描述屏幕空间的位置
+就像UV坐标描述一张纹理的2d空间位置
+ndx.z的值域目前也是[-1,1]，转换为[0,1]可以方便的描述从near->far之间的深度
+留意ndx.z与view.z，clip.z的映射关系不是线性的
+clip.z除以clip.w(即eye.z)之后的结果，仍保留了eye.z的递增/递减关系，但其分布变得不均匀了(非线性)
+
+clip矩阵
+构造一个矩阵，使得eye * 该矩阵 => (上述规范下的)clip
+    解释为什么要用行向量
+    这次我们用行向量是因为URP在hlsl环境中使用的就是行向量，我们向URP规范靠拢
+    上节课做TBN变换时用的列向量去组成TToW矩阵，是为了让normalTS与TTow矩阵相乘的代码写起来比较简单
+    观察验证Unity vp矩阵
+
+ctg(fovX/2)求值
+    = z/x = z/(y*AspR) = ctg(fovY/2)/AspR 
+
+细节变化
+    Unity相机是-z朝向
+    以及URP使用ReversedZ深度变换        
+            https://zhuanlan.zhihu.com/p/75517534
+    VP矩阵M22是负值，说明URPClip空间y轴颠倒
+    推导了一下VP矩阵M33, M34
+        VP.M33 = -n/(f-n)
+        VP.M34 = fn/(f-n)
+    想了半天，这个M33, M34对于(unity相机空间下的)负值Z要怎么生效。后来明白过来这是VP矩阵，它负责处理的是世界空间下的坐标，此时z是正值
+    
+    又稍微推导了一下，Unity纯P矩阵的M33, M34只要把上面的计算取反就行，即
+    P.M33 = n/(f-n)
+    P.M34 = -fn/(f-n)
