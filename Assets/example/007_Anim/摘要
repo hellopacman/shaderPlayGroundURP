@@ -1,0 +1,69 @@
+Unity k帧动画
+1. 小球缩放动画
+观察
+    每两个关键帧之间是一个tween，多个tween组成一个track操纵某特定属性
+    多个track组成一个clip
+    确认clip中的position、scale是local position、local scale
+2. 做两个小球缩放动画，一个比较大，一个比较小
+演示状态机组织clip的两种思路
+    两个clip的的过渡衔接
+    两层clip的叠加
+        引入多个动画层之后，计算量变大
+3. 对猴头应用上述动画状态机
+    Animator播放/采样clip，按track路径把采样值应用到Animator宿主对象的对应属性上
+
+
+
+blender演示骨骼蒙皮动画思路
+    模型顶点记录自己所绑定骨骼的权重
+    unity从fbx导入骨骼动画时最多支持一个顶点绑定到4个骨骼
+        看api文档是可以支持到大于4个骨骼
+    https://www.youtube.com/watch?v=yZhM7CR91so
+    https://www.bilibili.com/video/BV1mM411h7kU/
+    unity对应的api
+    https://docs.unity3d.com/ScriptReference/SkinnedMeshRenderer.html
+    https://docs.unity3d.com/ScriptReference/Mesh.html
+
+
+角色动画状态机常用功能演示
+1. 动画状态机
+    state过渡
+        时长过渡
+        条件过渡
+            https://docs.unity3d.com/Manual/class-Transition.html
+    过渡中断
+        https://blog.unity.com/technology/wait-ive-changed-my-mind-state-machine-transition-interruptions
+2. substateMachineGroup
+    Entry.Default
+        Default过渡相当于Swith Case Default
+    老bug
+        BaseLayer.entry上来总是无视分支强制走Default
+        等执行到子状态机.entry如果有多个分支，就正常了
+3. 分层动画
+    AvatarMask + 动画图层混合权重
+4. 动作融合树
+    1D融合树
+        根据speed参数实现站->走->跑的融合过渡
+    2D融合树
+        根据speedX，speedY的取值范围实现四方向移动动作的融合
+5. Humanoid功能演示
+    骨骼重定向
+        演示generic rig下skinnedMesh随骨架移动的现象
+        说明generic体型不同的骨架不能通用
+        解决方案：Humanoid
+        把generci骨架/动画转换成中间层Humanoid规格
+        从而实现不同体型骨架互用动画
+        * Humanoid骨架细致度比generic要低，适合做次要角色比如npc
+    IK范例
+        注视
+            眼、头、身权重控制
+        脚步位置适配地形
+
+timeline
+    借助上面的知识timeline很容易理解
+    观看timeline官方范例
+        了解timeline自定义拓展功能的思路
+    timeline animTrack覆盖场景对象即有动画状态
+        animclip的Extrapolation选项
+
+
