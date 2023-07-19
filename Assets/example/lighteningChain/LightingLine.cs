@@ -1,13 +1,14 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
-using Unity.VisualScripting;
 using UnityEngine;
+
 
 
 namespace SLGGame
 {
     [RequireComponent(typeof(LineRenderer))]
+    [ExecuteInEditMode]
     public class LightingLine : MonoBehaviour
     {
         public int segments = 20;
@@ -52,6 +53,8 @@ namespace SLGGame
         private Vector3 _lastEndPos = Vector3.positiveInfinity;
         private Vector3 _startPos;
         private Vector3 _endPos;
+        private Vector3 _fwdDir = Vector3.forward;
+        private Vector3 _sideDir = Vector3.right;
 
 
         private void Start()
@@ -101,7 +104,7 @@ namespace SLGGame
                 return false;
             }
 
-            Debug.LogFormat("更新挂点位置");
+            //Debug.LogFormat("更新挂点位置");
             _startPos = startPosTrsf.position;
             _endPos = endPosTrsf.position;
             LerpPos();
@@ -129,7 +132,7 @@ namespace SLGGame
 
                 for (int i = 0; i <= segments; i++)
                 {
-                    _posArr[i] = Vector3.Lerp(_posList[i], _posList[i] + new Vector3(0, Arcing(i), 0), _arcingCountDown);
+                    _posArr[i] = Vector3.Lerp(_posList[i], _posList[i] + Arcing(i) * _sideDir, _arcingCountDown);
                 }
                 ifChanged = true;
             }
@@ -155,7 +158,7 @@ namespace SLGGame
 
                     for (int i = 0; i <= segments; i++)
                     {
-                        _sineOffsets[i] = new Vector3(0, Sine(i + _sineRandom), 0);
+                        _sineOffsets[i] = Sine(i + _sineRandom) * _sideDir;
                     }
 
                     _sineCountDown = 0;
@@ -184,7 +187,7 @@ namespace SLGGame
                     for (int i = 0; i <= segments; i++)
                     {
                         // Random.Range<int>(0, 10) * 0.1f，保留精度到0.1
-                        _wiggleRandom[i] = new Vector3(0, Random.Range(0, 10) * 0.1f * randomSize, 0);
+                        _wiggleRandom[i] = Random.Range(0, 10) * 0.1f * randomSize * _sideDir;
                     }
                     _wiggleCountDown = 0;
                 }
@@ -205,7 +208,7 @@ namespace SLGGame
 
         private void SetLinePosition(Vector3[] pointPosArr)
         {
-            Debug.Log("设置Line上各点位置");
+            //Debug.Log("设置Line上各点位置");
             _lineRder.positionCount = segments + 1;
             _lineRder.SetPositions(pointPosArr);
             //_lineRder.SetPositions(NoAllocHelpers.ExtractArrayFromListT(listPoint));
@@ -230,6 +233,9 @@ namespace SLGGame
             {
                 _posList[i] = Vector3.Lerp(_startPos, _endPos, (float)i / segments);
             }
+
+            _fwdDir = (_endPos - _startPos).normalized;
+            _sideDir = Vector3.Cross(_fwdDir, Vector3.up);
         }
 
 
