@@ -1,0 +1,374 @@
+// 需求
+数据区域外的区域仍然有迷雾，并且可由美术自定义其形态
+方案：用maskExpand指定这部分迷雾延伸的尺寸，美术在borderMask上绘制其形态           
+    但对于大世界来说，init mask时整个复制borderMask的做法就不合适了，因用一个fogMask装进整个大世界太勉强
+    会改成aoi subfogPatchGroup，borderMask仍然保留，此时当需要使用fogData领域之外的数据时，再去borderMask中读取
+
+// 需求
+为了搭配高亮选择，渐隐等效果
+迷雾格相邻侧是空洞则向其出血一个patternBorderSize，空洞格临侧是迷雾则收缩一个patternBorderSize
+
+// 需求
+把纹理1某区域内像素的某通道数据，复制到纹理2的某（相同大小）区域的某通道上
+    还要保持目标其余其他通道数据不变
+目前只需要处理mipmap0
+结论是没有完美的技术方案
+    1. 用NativeArray直接写入数据，大批量操作时效率低
+    2. 用getPixel取出目标区域，修改目标通道，然后再用SetPixel设置回去
+        频繁取出目标区域有gc问题
+    3. 维护目标纹理的整个pixel32数据，修改后setPixel32设置回纹理
+        额外维护一个color32[]，很占内存的
+推敲推敲
+    1. 用getPixel取封边形状，因为形状数量有限，可以缓存下来供后边随时取用
+        解决gc问题
+    2. 用setPixel32拷贝封边形状数据到fogMask，速度比较快，接口是现成的，调用方便
+    3.复制特定通道的数据，前面提到的方案都有各自的缺陷，而且这些缺陷对七海项目来说不能接受        
+        结合七海的迷雾机制
+        1) 只有消除，没有重生
+        2) 除了迷雾形状通道，还有高亮、变色、透明度(淡入淡出)额外三个控制
+        3）迷雾格子向没有迷雾的格子做出血，即只有无迷雾格子有出血
+        4) 迷雾格子消除后，该格子上的高亮变色等控制可看作随之清除。(剩余的出血部分可能仍要保留高亮变色等控制)
+        我想到了两个办法
+        1）形状、高亮染色合并成一张纹理，形状数据用R通道。封边图是RGBA32的，在R存储形状数据，GB数据为0，A为255
+            消除时直接把待消除格子所有通道都填0
+            直接从封边图复制RGBA数据过去，省事
+            因为只有无迷雾格子里才会有封边，而无迷雾的格子也不会有全格的高亮上色透明效果，所以覆盖了封边区域的GBA通道也没有关系
+            但新画上的封边部分的高亮上色等效果还是要重新推算一下，比如待消除格子的旁边恰好就是高亮上色格子的话，这些效果要溢出到封边上才对            
+        2) 形状单独一张R8纹理，高分辨率
+            高亮染色透明合成一张RGB24，低分辨率
+                甚至它都有可能用NativeArray.copy来优化效率v
+            消除时用SetPixel32填充格子，复制封边
+            高亮染色在低分辨率遮罩上做，这样它即便用NativeArray性能应该也过的去
+            消除时
+                对形状图
+                    先填充待消除格子
+                    计算复制封边
+                对低分辨率控制遮罩
+                    不用管待消除格子的数，反正显示不出来
+                    如有必要，计算、填充各效果向封边区域的溢出
+
+                
+
+
+参见一下测试和分析，
+确认下texture2d有提供现成的函数吗
+    Color32
+        GetPixel32
+            只能获取整张纹理的全部数据(严谨来说an entire mipmap level)，不能获取局部区域数据
+            如果目标纹理的数据不是Color32，有格式转换开销
+            如果目标纹理是压缩格式，不确定unity是否要先把纹理解压一份，造成额外内存开销
+                貌似支持Crunch texture compression
+        SetPixels32
+            可以设置局部区域数据
+            只支持特定格式（无压缩或者常见无损压缩格式）
+            有格式转换开销
+    Color
+        GetPixel/GetPixels
+            如果目标纹理的数据不是Color32，有格式转换开销
+            如果目标纹理是压缩格式，unity要先把纹理解压一份，造成额外内存开销
+            不能用于Crunch texture compression
+            GetPixels可以获取局部区域数据
+        SetPixel/SetPixels
+            只支持特定格式（无压缩或者常见无损压缩格式）
+            有格式转换开销
+            SetPixels可以设置局部区域数据
+            
+    NativeArray<T>/byte[]
+        GetPixelData
+            返回NativeArray<T>
+            是指定mipmapLev下的纹理数据地址指针
+                因此不能直接返回特定局部区域数据
+            不分配额外内存
+            返回的地址，在纹理修改、更新后可能不再正确                
+        SetPixelData
+            设置指定mipmapLev的raw数据
+            is useful if you want to load compressed or other non-color texture format data into a texture.
+            自行确保尺寸、格式与目标纹理想相匹配
+            只能指定待复制数据的起始索引，不支持复制局部区域的数据
+            * 猜测底下应该是把数据复制到目标纹理，而不是让目标纹理直接指向新数据吧，所以是有复制数据开销的
+        GetRawTextureData
+            返回NativeArray<T>                
+                是mipmapLev 0开始的纹理数据地址指针
+                是底层数据，即如果纹理有压缩，则返回的是压缩后的数据
+                不分配额外内存
+                返回的地址，在纹理修改、更新后可能不再正确
+            返回byte[]
+                返回的是纹理数据副本
+                返回的数据，在纹理修改、更新后可能不再正确
+                    不太理解，既然返回的是数据副本，源纹理变化应该不会影响到数据副本才是
+        LoadRawTextureData
+            设置整个纹理的cpu内存数据，包含所有mipmapLev
+            可以提供任意格式数据：无压缩，压缩，非图像数据
+            * 猜测底下应该是把数据复制到目标纹理，而不是让目标纹理直接指向新数据吧，所以是有复制数据开销的
+   
+速度测试
+(Samsung笔记本)Intel(R) Core(TM) i7-6500U CPU @ 2.50GHz   2.59 GHz
+64x64 RGBA32 setPixelData<byte>(byte[64x64x4])
+    x1000 1ms
+    x10000 12ms
+    x100000 110ms
+1024x1024 RGBA32 setPixelData<byte>(byte[1024x1024x4])
+    x10 8ms 
+    x100 50ms
+    x1000 480ms
+64x64 RGBA32  遍历所有byte,执行NavtiveArray<byte>[i] = 255
+    x1000 560ms
+    x10000 5398ms
+循环64x64x4次，byte[i]=255
+    x1000 60ms
+    x10000 690ms
+NativeArray<byte>.Copy(byte[64x64x4], (64x64RGBA32).NativeArray<byte>)
+    x1000 1ms
+    x10000 9ms
+    x100000 70ms
+* setPixelData<byte>和NativeArray<byte>.Copy性能差不多
+* 用NavtiveArray<byte>[i]逐byte写入，比byte[i]逐byte写入慢10倍
+    
+    * 需要从封边图复制某个方向的封边，所以需要局部区域拷贝功能
+    * 理论上最快的方式是拿到NavtiveArray，修改，然后Applay
+        但是测试发现
+            大量用NavtiveArray[]做逐个数据写入，效率不如局部复制函数高(比如SetPixels)
+                在这次新手地图的规模下，手机上SetPixels的速度足够用了
+            NavtiveArray和别的方法混用（比如SetPixels），NativeArray会失效
+    * Apply is an expensive operation because it copies all the pixels in the texture even if you've only changed some of the pixels, so change as many pixels as possible before you call it.
+    * 写纹理像素时支持wrapmode
+    * 另外参见gpu侧纹理复制 
+        Graphics.CopyTexture
+        The CPU texture might not match the GPU texture if you used a method such as Graphics.CopyTexture that only updates GPU textures, so the CPU texture is out of sync.
+        https://docs.unity3d.com/ScriptReference/Graphics.CopyTexture.html
+        * Graphics.CopyTexture和Blit的区别
+        Texture2D.ReadPixels
+        https://docs.unity3d.com/ScriptReference/Texture2D.ReadPixels.html
+
+那么回到需求，技术方案应
+    1. 不要用纹理压缩/crunch
+    2. NativeArray本来是最佳选择（无额外内存开销）
+        但是NativeArray<byte>[]实测有效率问题，只好暂搁置，也许在追求极致内存占用的情况再考虑
+            测试下NativeArray<T0>.GetSubArray，搭配NativeArray<T0>.copy 一次复制一行数据是不是效率好一点???
+            这做法不支持只复制特定通道...
+        所以，目前感觉Col32综合性价比更合适
+        继续!!!!!!!!!!!!!!!!!
+        
+
+// 需求:处理迷雾内外拐角
+处理拐角可以有多重方案
+先选一个拷贝数据开销比较小的：先单独画上直来直去的封边
+    然后再在拐角的地方覆盖一块小布丁
+算法
+    只关心无迷雾格子
+    遍历无迷雾格子的四个角
+        按特定顺序比如顺时针检查一个角的三个相邻迷雾格子的开合
+        一共8中情况(假设用1表示有雾，0表示没雾)
+        以下情况需绘制内拐角
+            101, 111
+        以下情况绘制外拐角
+            010
+        
+
+
+2023年9月30日
+不再使用nativeArray，改用color32[]
+TryUpdateFogTexData当时用来解决NativeArray失效的问题
+	现在如果换成pixel32，nativeArray就可以删了
+修改init mask时整个复制borderMask的做法
+    其实borderMask最早引入的时候，就是针对特定情况的：地图边界上写死的，有些地方有迷雾，有些没有，用borderMask把没迷雾的地方的单调感给破一下
+    这种时候不用关心边界外的迷雾是否开合，只需要把borderMask拷贝过来即可
+    后来有了画出血这个需求，根据迷雾的开合情况画相邻格子的出血，边界外格子视为有迷雾，整个地图的绘制都格基于此规则，格子化。
+    此时旧border机制会导致出现手绘边缘与程序化边缘生硬并排的情况    
+    bordeMask还能有用吗？
+        比如是否可以改成如果需要使用fogData领域之外的数据时，再去borderMask中读取
+        不确定，得看具体情况
+为了拓展性，fogMask的数据用byte[]记录，以便日后支持fogMask更多格式
+GetCachedPixels -> GetCachedPixelCol32s 
+
+
+
+
+
+
+        // 删除
+        /*
+        private void TryUpdateFogTexData()
+        {
+            //if (!_fogTexData.IsCreated)
+            //{
+            //    Debug.Log("!!!!!!!!!!获取_fogTexData");
+            //    _fogTexData = _fogMask.GetRawTextureData<byte>();
+            //}
+
+            // Debug.Log("!!!!!!!!!!获取_fogTexData");
+            _fogTexData = _fogMask.GetRawTextureData<byte>();
+        }
+        */
+
+
+        // 该函数重构为FillGridPixels
+        // 重构前
+        // 填充一个迷雾格子内的像素
+        // fogX,fogY,小块迷雾坐标，含封边
+        // isTrue，迷雾是否开合，是否高亮选择等等
+        // channelOffset，用来控制写入Mask的哪个通道
+        // isAdaptAdjacent 高亮选择，渐隐等效果，是否要做【出血】效果：向相邻迷雾格子渗透一些像素
+        protected void PopulatePixelTessellation(int fogX, int fogY, bool isTrue, byte fogMaskVal, int ChannelCount = 1, int maskChannelOffset = 0, bool isAdaptAdjacent = false)
+        {
+            // 小迷雾坐标转换为纹理坐标
+            int pixelX = fogX * pixelTessellation;
+            int pixelY = fogY * pixelTessellation;
+            int pixelMaxX = pixelX + pixelTessellation;
+            int pixelMaxY = pixelY + pixelTessellation;
+
+            if (isAdaptAdjacent)
+            {
+                int fogDataX = fogX - maskExpand.x;
+                int fogDataY = fogY - maskExpand.z;
+
+                // wusy 2023-6-9
+                byte[,] statusArr = _fogData;
+                int statusArrWidth = statusArr.GetLength(0);
+                int statusArrHeight = statusArr.GetLength(1);
+
+                // todo 如果上下左右全是迷雾，就不用缩边了
+
+                // 为了搭配高亮选择，渐隐等效果
+                // 有空洞则出血一个patternBorderSize，是迷雾则收缩一个patternBorderSize
+                // 左边
+                float expandFactor = 1f;
+                float shrinkFactor = 0.7f;
+
+                if (fogDataX == 0)  // 贴边的迷雾，先默认按照有封边处理 todo 看是否考虑没有封边的情况
+                {
+                    pixelX += (int)(patternBorderSize * shrinkFactor);
+                }
+                else if (fogDataX - 1 >= 0)
+                {
+                    if (statusArr[fogDataX - 1, fogDataY] == 0)
+                    {
+                        pixelX -= (int)(patternBorderSize * expandFactor);
+                    }
+                    else
+                    {
+                        pixelX += (int)(patternBorderSize * shrinkFactor);
+                    }
+                }
+                // 右边
+                if (fogDataX == statusArrWidth - 1)
+                {
+                    pixelMaxX -= (int)(patternBorderSize * shrinkFactor);
+                }
+                if (fogDataX + 1 < statusArrWidth)
+                {
+                    if (statusArr[fogDataX + 1, fogDataY] == 0)
+                    {
+                        pixelMaxX += (int)(patternBorderSize * expandFactor);
+                    }
+                    else
+                    {
+                        pixelMaxX -= (int)(patternBorderSize * shrinkFactor);
+                    }
+                }
+                // 下边
+                if (fogDataY == 0)
+                {
+                    pixelY += (int)(patternBorderSize * shrinkFactor);
+                }
+                else if (fogDataY - 1 >= 0)
+                {
+                    if (statusArr[fogDataX, fogDataY - 1] == 0)
+                    {
+                        pixelY -= (int)(patternBorderSize * expandFactor);
+                    }
+                    else
+                    {
+                        pixelY += (int)(patternBorderSize * shrinkFactor);
+                    }
+                }
+                // 上边
+                if (fogDataY == statusArrHeight - 1)
+                {
+                    pixelMaxY -= (int)(patternBorderSize * shrinkFactor);
+                }
+                else if (fogDataY + 1 < statusArrHeight)
+                {
+                    if (statusArr[fogDataX, fogDataY + 1] == 0)
+                    {
+                        pixelMaxY += (int)(patternBorderSize * expandFactor);
+                    }
+                    else
+                    {
+                        pixelMaxY -= (int)(patternBorderSize * shrinkFactor);
+                    }
+                }
+            }
+
+            int pixelId = pixelY * actualPixelWidth + pixelX;
+
+            // 2023-3-1 wusy 填充该小块迷雾下的所有像素
+            for (int v = 0; v < pixelMaxY - pixelY; v++)
+            {
+                for (int u = 0; u < pixelMaxX - pixelX; u++)
+                {
+                    _fogTexData[(pixelId + u) * ChannelCount + maskChannelOffset] = (byte)(isTrue ? fogMaskVal : 0);
+                }
+
+                pixelId += actualPixelWidth;
+            }
+
+            _needApply = true;
+        }
+
+
+        // 重构前
+        /*
+         protected virtual void InitFogMask()
+        {
+            // GetRawTextureData更快更省
+            int index = 0;
+
+            // 2023-9-1 wusy 临时需求，外封边区域迷雾颜色调暗一些
+            //Rect range = new Rect(maskExpand[0] * pixelTessellation + patternBorderSize, maskExpand[2] * pixelTessellation + patternBorderSize,
+            //    GridNum.x * pixelTessellation - patternBorderSize * 2,
+            //    GridNum.y * pixelTessellation - patternBorderSize * 2
+            //    );
+            Rect range = new Rect(maskExpand[0] * pixelTessellation, maskExpand[2] * pixelTessellation,
+                GridNum.x * pixelTessellation,
+                GridNum.y * pixelTessellation
+                );
+            Vector2 pixelPos = new Vector2();
+
+            // Unity Texture coordinates start at lower left corner.
+            for (int y = 0, jcount = _fogMask.height; y < jcount; y++)
+            {
+                for (int x = 0, icount = _fogMask.width; x < icount; x++)
+                {
+                    byte channelB = 0xff;   // 有变色
+                    pixelPos.x = x;
+                    pixelPos.y = y;
+                    if (range.Contains(pixelPos))
+                    {
+                        // 非封边迷雾无变色
+                        channelB = 0;
+                    }
+
+                    int byteId = index * 4;
+                    _fogTexData[byteId++] = 0xff;  // R 迷雾开合，默认有迷雾
+                    _fogTexData[byteId++] = 0;      // G 高亮选择，默认无高亮
+                    _fogTexData[byteId++] = channelB;  // B 变色
+                    _fogTexData[byteId++] = 0xff;   // A，不透明度，默认不透明
+                    index++;
+                }
+            }
+        }
+        */
+
+
+
+用Retroarch制作的街机麻将大全，作者无从考证，哪位知道的可以告诉我。
+免费免设置(键位都给设计好了，横屏竖屏都可以)，装机即玩！
+
+将RetroArch文件夹复制到手机根目录，安装RetroArch麻将版程序，按照视频方法开玩！注意不要扫描文件夹和扫描文件，如果你安装正确游戏目录会自动出现的！
+
+下载地址:
+https://pan.baidu.com/s/15KoKFQucOTQwUWhp2py_Zw 
+提取码:enxq
+解压密码:
+fyshl

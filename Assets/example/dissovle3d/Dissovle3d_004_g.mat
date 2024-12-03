@@ -65,7 +65,7 @@ Material:
     - _edgeWidth: 0.86
     - _invert: 0
     - _noiseScale: 2
-    - _radius: 30.72
+    - _radius: 28.8
     m_Colors:
     - _diffuse: {r: 0.6981132, g: 0.28648987, b: 0.48777342, a: 0}
     - _dissovePos: {r: 0, g: 0, b: 0, a: 0}
